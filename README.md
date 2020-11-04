@@ -12,6 +12,12 @@ Save your favorite songs chords and lyrics in an ordered manner and visualize th
 Create new songs and begin the song writing/ transcribing process:
 
 
+Search trough all your created songs:
+
+
+Tag system to easily find and organize your songs:
+
+
 
 Easily change song chords tones:
 
