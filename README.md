@@ -2,6 +2,12 @@
 
 A simple powerful tool for managing songs lyrics and chords
 
+## DOWNLOAD
+
+https://github.com/wolfred24/SongChords/releases/tag/v0.1
+
+## DEMOSTRATION
+
 Main window:
 
 ![Main Window Picture](demo/main.png)
