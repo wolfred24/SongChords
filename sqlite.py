@@ -127,7 +127,7 @@ class Sqlite:
 
     def update_song_file(self, rowid, file):
         sql = f'UPDATE songs SET file="{file}", ' \
-              f'date_modified="{datetime.datetime.today().strftime("%y-%m-%d %H.%M.%S")}" ' \
+          f'date_modified="{datetime.datetime.today().strftime("%y-%m-%d %H.%M.%S")}" ' \
               f'WHERE rowid = {rowid};'
         print(sql)
         cur = self.connection.cursor()

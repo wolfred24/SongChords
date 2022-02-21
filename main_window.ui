@@ -59,13 +59,6 @@
       <item row="0" column="0">
        <widget class="QLineEdit" name="ln_search"/>
       </item>
-      <item row="2" column="0" colspan="2">
-       <widget class="QListWidget" name="ls_songs">
-        <property name="mouseTracking">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="1">
        <widget class="QPushButton" name="btn_search">
         <property name="text">
@@ -503,6 +496,13 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QListWidget" name="ls_songs">
+        <property name="mouseTracking">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item>
@@ -685,6 +685,29 @@
           <property name="icon">
            <iconset>
             <normaloff>icons/folder.svg</normaloff>icons/folder.svg</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_youtube">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>icons/youtube.png</normaloff>icons/youtube.png</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
           </property>
          </widget>
         </item>

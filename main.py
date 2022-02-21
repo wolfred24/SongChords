@@ -2,12 +2,13 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# python-vlc documentation https://www.olivieraubert.net/vlc/python-ctypes/doc/
 
 import sys
 from PyQt5 import uic
-from PyQt5.QtWidgets import QMainWindow, QApplication, QDialog, QListWidgetItem, QCompleter, QMenu, QAction, QPushButton, QFileDialog, QShortcut
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QDialog, QListWidgetItem, QCompleter, QMenu, QAction, QPushButton, QFileDialog, QShortcut
 from PyQt5.QtGui import QIcon, QPixmap, QKeySequence
-from PyQt5.QtCore import Qt, QEvent, QItemSelectionModel, QTimer
+from PyQt5.QtCore import Qt, QEvent, QItemSelectionModel, QTimer, pyqtProperty, QThread
 from sqlite import Sqlite
 from pathlib import Path
 # from aupyom import Sampler, Sound
@@ -15,6 +16,18 @@ import music_tools
 # import pkg_resources
 import vlc
 import os
+import os.path
+from os import path
+import audio_tools
+import media_downloader
+# from pipeline import Pipeline
+
+# import gi
+# gi.require_version('Gst', '1.0')
+# from gi.repository import Gst
+# Gst.init(None)
+
+
 
 try:
     # Include in try/except block if you're also targeting Mac/Linux
@@ -30,7 +43,7 @@ class Main_window(QMainWindow):
     sqlite = Sqlite()
     current_working_song_id = 0
     current_song = []
-    current_song_file = ""
+    current_song_file = "" # current audio file path
     working_status = "preview"
     fullscreen_status = False
     current_song_tags_buttons = []
@@ -38,6 +51,7 @@ class Main_window(QMainWindow):
     gray = "#e3e3e3"
     # os.environ["VLC_PLUGIN_PATH"] = "/usr/lib/x86_64-linux-gnu/vlc/plugins/"
     os.environ["VLC_PLUGIN_PATH"] = "./plugins/"
+    # gstreamer_player = Pipeline("autoaudiosink")
 
     def pkg_sound(self, filepath):
         return pkg_resources.resource_filename(__name__, filepath)
@@ -66,20 +80,55 @@ class Main_window(QMainWindow):
             if self.mediaplayer.play() == -1:
                 self.open_file()
                 return
+            if self.lb_user_tone.text() != "0": # if there is a custome simtones transpose
+                original_filename = self.current_song_file.split("/")[-1]
+                custom_filename = original_filename[:-4] + self.lb_user_tone.text() + original_filename[-4:]
+                custom_filepath = "multimedia/" + custom_filename
+                print(custom_filename)
+                if not path.exists(f"multimedia/{custom_filename}"):
+                    # loading_dialog = loaderDialog()
+                    transoped_multimedia_file_path = audio_tools.pitch_shift(file_path=self.current_song_file,
+                                                                                  output_filename=custom_filename, semitones=self.lb_user_tone.text())
+                    self.load_file(transoped_multimedia_file_path)
+                    # loading_dialog.enable_close_button()
+                else:
 
+                    self.load_file(custom_filepath)
+            else:
+                self.load_file(self.current_song_file)
             self.mediaplayer.play()
             # self.playbutton.setText("Pause")
             self.playbutton.setIcon(self.icon_pause)
             self.timer.start()
             self.is_paused = False
 
-    def load_file(self, filename):
-        if filename is None or filename == "":
+    # def play_pause_gstreamer(self):
+    #     """Toggle play/pause status
+    #     """
+    #
+    #     if self.is_paused == True:
+    #         if self.current_song_file == "":
+    #             self.current_song_file = QFileDialog.getOpenFileName(self, dialog_txt, os.path.expanduser('~'))
+    #             return
+    #         self.gstreamer_player.set_file(self.current_song_file)
+    #         print(self.current_song_file)
+    #         self.gstreamer_player.play()
+    #         self.timer.stop()
+    #         self.playbutton.setIcon(self.icon_play)
+    #         self.is_paused = False
+    #     else:
+    #         self.gstreamer_player.pause()
+    #         self.playbutton.setIcon(self.icon_pause)
+    #         self.timer.start()
+    #         self.is_paused = True
+
+    def load_file(self, file_path): # load multimedia file
+        if file_path is None or file_path == "":
             self.lb_file_name.setText("")
             self.stop()
             return
         else:
-            self.media = self.instance.media_new(filename)
+            self.media = self.instance.media_new(file_path)
             self.mediaplayer.set_media(self.media)
             self.media.parse()
             self.media_duration = '%.1f'%(self.media.get_duration() / 1000)
@@ -91,7 +140,8 @@ class Main_window(QMainWindow):
             # self.sqlite.update_song_file(self.current_working_song_id, filename[0])
 
     def open_file(self):
-        """Open a media file in a MediaPlayer
+        """Open a file chooser dialog to select and load a media file, slection will be stored for
+           future use
         """
 
         dialog_txt = "Choose Media File"
@@ -246,6 +296,7 @@ class Main_window(QMainWindow):
         self.btn_transpose_down.setEnabled(False)
         self.btn_transpose_up.setEnabled(False)
         self.btn_notation.setEnabled(False)
+        self.btn_youtube.setEnabled(False)
         self.ln_start_time.setReadOnly(True)
         self.ln_stop_time.setReadOnly(True)
 
@@ -274,6 +325,8 @@ class Main_window(QMainWindow):
 
 
         self.btn_create_song.clicked.connect(self.open_create_new_song_dialog)
+        # self.btn_create_song.clicked.connect(self.open_create_new_song_dialog)
+        self.btn_youtube.clicked.connect(self.display_media_download_dialog)
         self.btn_fullscreen.clicked.connect(self.fullscreen)
         self.btn_transpose_down.clicked.connect(self.transpose)
         self.btn_transpose_up.clicked.connect(self.transpose)
@@ -303,7 +356,7 @@ class Main_window(QMainWindow):
             self.ls_songs.insertItem(0, list_item)
 
         self.instance = vlc.Instance()
-        self.is_paused = False
+        self.is_paused = True
         self.media = None
         self.positionslider.setMaximum(1000)
         self.positionslider.sliderMoved.connect(self.set_position)
@@ -415,7 +468,7 @@ class Main_window(QMainWindow):
         if sender.objectName() == "btn_transpose_down": self.lb_user_tone.setText(str(int(self.lb_user_tone.text())-1))
         if sender.objectName() == "btn_transpose_up": self.lb_user_tone.setText(str(int(self.lb_user_tone.text())+1))
         song = self.text_song.toPlainText()
-        transposition_semitones = int(self.lb_user_tone.text())
+        transposition_semitones = int(self.lb_user_tone.text()) # custom transposing semitones
         transposed_song = music_tools.transpose(self.current_song[2], transposition_semitones)
         self.sqlite.update_user_tone(self.ls_songs.currentItem().data(32)['id'], self.lb_user_tone.text())
         self.text_song.clear()
@@ -530,6 +583,8 @@ class Main_window(QMainWindow):
         self.btn_transpose_down.setEnabled(True)
         self.btn_transpose_up.setEnabled(True)
         self.btn_notation.setEnabled(True)
+        self.btn_youtube.setEnabled(True)
+
         self.ln_start_time.setReadOnly(False)
         self.ln_stop_time.setReadOnly(False)
         self.current_working_song_id = self.ls_songs.currentItem().data(32)["id"]
@@ -594,6 +649,20 @@ class Main_window(QMainWindow):
         # print("AAAAAAAAa")
         # QTimer.singleShot(1, self.select_song)
 
+    def display_media_download_dialog(self):
+        media_download_dialog = create_new_media_download_dialog(self, self.current_working_song_id)
+        print(f'Test song id:{self.current_working_song_id}')
+        media_download_dialog.setModal(True)
+        media_download_dialog.exec()
+        self.load_file(self.current_song_file)
+
+
+    # def display_loading_dialog(self):
+    #     create_loading_d = create_loading_dialog(self)
+    #     create_loading_d.setModal(True)
+    #     create_loading_d.exec()
+    #     return create_loading_d
+
     def search(self, text):
         for row in range(self.ls_songs.count()):
             it = self.ls_songs.item(row)
@@ -626,7 +695,6 @@ class create_new_song_dialog(QDialog):
         self.ln_artist.setCompleter(artist_completer)
         self.mw = main_window
 
-
     def create_song(self):
         artist = self.ln_artist.text()
         title = self.ln_title.text()
@@ -647,8 +715,89 @@ class create_new_song_dialog(QDialog):
         self.mw.select_song()
         self.close()
 
+class create_new_media_download_dialog(QDialog):
+    sqlite = Sqlite()
+    mw = None
+
+    def __init__(self, main_window, song_id):
+        super().__init__()
+        self.mw = main_window
+        uic.loadUi("media_download.ui", self)
+        self.btn_cancel.clicked.connect(self.close)
+        self.btn_download.clicked.connect(lambda x:self.download_song(song_id))
+
+    def download_song(self, song_id):
+        downloaded_file_path = media_downloader.download_video_to_mp3(self.ln_url.text())
+        print(downloaded_file_path)
+        self.mw.current_song_file = downloaded_file_path
+        self.sqlite.update_song_file(song_id, downloaded_file_path)
+        self.close()
 
 
+class Create_loading_dialog(QDialog):
+
+    mw = None
+
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("loading.ui", self)
+        self.btn_close.clicked.connect(self.close)
+        self.btn_close.setEnabled(False)
+        self.mw = main_window
+        # spiner = Spinner()
+
+    def activate_close_button(self):
+        self.btn_close.setEnabled(True)
+
+class loaderDialog(QWidget):
+    def __init__(self, parent=None):
+        super(loaderDialog, self).__init__(parent)
+        # self.initUI()
+        self.thread = QThread(self)
+        self.create_loading_dialog = Create_loading_dialog()
+        self.create_loading_dialog.moveToThread(self.thread) # worker will be runned in another thread
+        # self.thread.started.connect(self.worker.doWork) # Call worker.doWork when the thread starts
+        self.thread.start() # Start the thread (and run doWork)
+
+    def enable_close_button(self):
+        # self.create_loading_dialog.done.connect(self.load_data_to_tree) # Call load_data_to_tree when worker.done is emitted
+        self.create_loading_dialog.activate_close_button()
+
+
+
+# class Spinner(QWidget):
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#         self.setAlignment(QtCore.Qt.AlignCenter)
+#         self.pixmap = QPixmap(load_icon)
+#
+#         self.setFixedSize(30, 30)
+#         self._angle = 0
+#
+#         self.animation = QPropertyAnimation(self, b"angle", self)
+#         self.animation.setStartValue(0)
+#         self.animation.setEndValue(360)
+#         self.animation.setLoopCount(-1)
+#         self.animation.setDuration(2000)
+#         self.animation.start()
+#
+#
+#     @pyqtProperty(int)
+#     def angle(self):
+#         return self._angle
+#
+#     @angle.setter
+#     def angle(self, value):
+#         self._angle = value
+#         self.update()
+#
+#
+#     def paintEvent(self, ev=None):
+#         painter = QPainter(self)
+#         painter.translate(15, 15)
+#         painter.rotate(self._angle)
+#         painter.translate(-15, -15)
+#         painter.drawPixmap(5, 5, self.pixmap)
 
 
 # def print_hi(name):
@@ -663,4 +812,28 @@ if __name__ == '__main__':
     main_window.show()
     sys.exit(app.exec_())
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+# LOADING WINDOW
+# class Worker(QObject):
+#     done = pyqtSignal(list)
+#
+#     def __init__(self, parent=None):
+#         super().__init__(parent)
+#
+#     def doWork(self):
+#         print("Start")
+#         time.sleep(10)
+#         self.done.emit(['one', 'two', 'three'])
+#         print("done")
+#
+# class loaderDialog(QWidget):
+#     def __init__(self, parent=None):
+#         super(loaderDialog, self).__init__(parent)
+#         self.initUI()
+#         self.thread = QThread(self)
+#         self.worker = Worker()
+#         self.worker.moveToThread(self.thread) # worker will be runned in another thread
+#         self.worker.done.connect(self.load_data_to_tree) # Call load_data_to_tree when worker.done is emitted
+#         self.thread.started.connect(self.worker.doWork) # Call worker.doWork when the thread starts
+#         self.thread.start() # Start the thread (and run doWork)
+
