@@ -32,8 +32,9 @@ def pitch_shift( file_path, output_filename, semitones):
     hipitch_sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate})
     #
     if semitones < 0:
-        print(f"Standarizing file audio playback speed: {-semitones + 1}")
-        hipitch_sound = hipitch_sound.speedup(1.2, 150, 10)
+        new_speed = round(-semitones + 1, 2)
+        print(f"Standarizing file audio playback speed: {new_speed}")
+        hipitch_sound = hipitch_sound.speedup(new_speed, 200, 5)
     # final_file = new_file.set_frame_rate(44100)
     hipitch_sound.export(f"multimedia/{output_filename}", format=format)
     return "multimedia/" + output_filename
